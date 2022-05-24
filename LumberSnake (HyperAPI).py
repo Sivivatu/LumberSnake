@@ -10,11 +10,11 @@ from tableauhyperapi import HyperProcess, Telemetry, \
 from pathlib import Path
 
 
-#############################
+##############################
 
-# UNZIP FILES (VIZQL / HTTP)#
+# UNZIP FILES (VIZQL / HTTP) #
 
-#############################
+##############################
 
 def ExtractLogs(OutputFilepath, ZipLogsFile):
     print('Extracting VizQL Logs From ' + ZipLogsFile + "...")
@@ -38,7 +38,7 @@ def ExtractLogs(OutputFilepath, ZipLogsFile):
                 zf.extract(info, OutputFilepath+"http\\")
 
     except Exception as e:
-        print (e)
+        print(e)
         pass
 
 ##############################
@@ -46,6 +46,7 @@ def ExtractLogs(OutputFilepath, ZipLogsFile):
 # Clean any files that clash #
 
 ##############################
+
 
 def cleanFilepath(directory):
 
@@ -93,23 +94,23 @@ def HyperCreate():
     print(">>> Creating Hyper File <<<")
     path_to_database = Path(hyperfile)
     with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-        with Connection(endpoint=hyper.endpoint,database=path_to_database,create_mode=CreateMode.CREATE_IF_NOT_EXISTS) as connection:
-            affected_rows = connection.execute_command(command=
-                f'''create table if not exists http  (
-                    serving_host             text,
-                    client_host              text,
-                    username                 text,
-                    ts                       text,
-                    timezone                 text,
-                    port                     text,
-                    request_body             text,
-                    xforward_for             text,
-                    status_code              text,
-                    response_size            text,
-                    content_length           text,
-                    request_time_ms          text,
-                    request_id               text
-                );''')
+        with Connection(endpoint=hyper.endpoint, database=path_to_database, create_mode=CreateMode.CREATE_IF_NOT_EXISTS) as connection:
+            affected_rows = connection.execute_command(command = 
+                                                        f'''create table if not exists http  (
+                                                            serving_host             text,
+                                                            client_host              text,
+                                                            username                 text,
+                                                            ts                       text,
+                                                            timezone                 text,
+                                                            port                     text,
+                                                            request_body             text,
+                                                            xforward_for             text,
+                                                            status_code              text,
+                                                            response_size            text,
+                                                            content_length           text,
+                                                            request_time_ms          text,
+                                                            request_id               text
+                                                        );''')
             connection.execute_command(command=
                 f'''create table if not exists dump_table (
                     dump text
@@ -125,21 +126,22 @@ def HyperCreate():
 
 ##############################
 
+
 def HyperSnake(vizqlfile):
     path_to_database = Path(hyperfile)
 
     print(">>> Ingesting " + vizqlfile)
 
     with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-        with Connection(endpoint=hyper.endpoint,database=path_to_database) as connection:
-            affected_rows = connection.execute_command(command=
+        with Connection(endpoint=hyper.endpoint, database=path_to_database) as connection:
+            affected_rows = connection.execute_command(command = 
                 f'''
                  CREATE TABLE IF NOT EXISTS dump_table AS (
                     SELECT * from {escape_string_literal(vizqlfile)}
                     (SCHEMA(dump json) WITH (FORMAT JSON)));''')
-            print('>>> Ingested string literals to dump_table or tracebacks: ',affected_rows)
+            print('>>> Ingested string literals to dump_table or tracebacks: ', affected_rows)
 
-            affected_rows = connection.execute_command(command=
+            affected_rows = connection.execute_command(command =
                 f'''                
                 CREATE TABLE IF NOT EXISTS raw_log AS (
                   SELECT
@@ -152,26 +154,26 @@ def HyperSnake(vizqlfile):
 
             print(">>> Cleaning Hyper...")
 
-            affected_rows = connection.execute_command(command=
+            affected_rows = connection.execute_command(command =
             f'''
             TRUNCATE TABLE dump_table;
             ''')
-            print('>>> Truncated rows in dump_table or tracebacks: ',affected_rows)
+            print('>>> Truncated rows in dump_table or tracebacks: ', affected_rows)
 
-            affected_rows = connection.execute_command(command=
+            affected_rows = connection.execute_command(command =
             f'''            
             DROP TABLE dump_table;
             ''')
-            print('>>> Dumped rows in dump_table or tracebacks: ',affected_rows)
+            print('>>> Dumped rows in dump_table or tracebacks: ', affected_rows)
 
-            affected_rows = connection.execute_command(command=
+            affected_rows = connection.execute_command(command =
             f''' 
             DELETE
             FROM raw_log
             WHERE 
             log_entry IS NULL
             ;''')  
-            print('>>> Deleted lines in raw_log or tracebacks: ',affected_rows)
+            print('>>> Deleted lines in raw_log or tracebacks: ', affected_rows)
 
             print(">>> Converting structure now...")
 
@@ -210,7 +212,7 @@ def HyperSnake(vizqlfile):
                 WHERE 
                 log_entry->>'k' = 'qp-batch-summary' 
                 );''')
-            print('>>> Converted log entries or tracebacks: ',affected_rows)
+            print('>>> Converted log entries or tracebacks: ', affected_rows)
 
             affected_rows = connection.execute_command(command=f'''
                 CREATE TABLE IF NOT EXISTS excplog AS (
@@ -229,15 +231,14 @@ def HyperSnake(vizqlfile):
                     FROM raw_log
                     WHERE log_entry->>'k' = 'excp'
                 );''')
-            print('>>> Converted exceptions or tracebacks: ',affected_rows)
+            print('>>> Converted exceptions or tracebacks: ', affected_rows)
 
             print(">>> Dropping the dump table...")
 
             connection.execute_command(
-                command=f"DROP TABLE raw_log;")
+                command = f"DROP TABLE raw_log;")
 
     print(">>> Hyper step complete...")
-
 
 
 ##############################
@@ -249,7 +250,7 @@ def HyperSnake(vizqlfile):
 
 def HTTPtoHyper(accessfile):
 
-    print (">>> Importing Access File " + accessfile + " to Hyper...")
+    print(">>> Importing Access File " + accessfile + " to Hyper...")
 
     path_to_database = Path(hyperfile)
 
@@ -266,7 +267,6 @@ def HTTPtoHyper(accessfile):
 
 
 start = time.time()
-
 
 
 if __name__ == '__main__':
@@ -303,7 +303,6 @@ if __name__ == '__main__':
         print("Exiting...")
         time.sleep(5)
         quit()
-
 
     HyperCreate()
 
