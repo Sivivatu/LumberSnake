@@ -110,7 +110,7 @@ def HyperCreate():
             create_mode=CreateMode.CREATE_IF_NOT_EXISTS,
         ) as connection:
             affected_rows = connection.execute_command(
-                command=f"""create table if not exists http  (
+                command="""create table if not exists http  (
                     serving_host             text,
                     client_host              text,
                     username                 text,
@@ -127,7 +127,7 @@ def HyperCreate():
                 );"""
             )
             connection.execute_command(
-                command=f"""create table if not exists dump_table (
+                command="""create table if not exists dump_table (
                     dump text
                 );"""
             )
@@ -166,7 +166,7 @@ def HyperSnake(vizqlfile):
             )
 
             affected_rows = connection.execute_command(
-                command=f"""                
+                command="""                
                 CREATE TABLE IF NOT EXISTS raw_log AS (
                   SELECT
                     CAST(dump AS json OR NULL) AS log_entry
@@ -180,21 +180,21 @@ def HyperSnake(vizqlfile):
             print(">>> Cleaning Hyper...")
 
             affected_rows = connection.execute_command(
-                command=f"""
+                command="""
             TRUNCATE TABLE dump_table;
             """
             )
             print(">>> Truncated rows in dump_table or tracebacks: ", affected_rows)
 
             affected_rows = connection.execute_command(
-                command=f"""            
+                command="""            
             DROP TABLE dump_table;
             """
             )
             print(">>> Dumped rows in dump_table or tracebacks: ", affected_rows)
 
             affected_rows = connection.execute_command(
-                command=f""" 
+                command=""" 
             DELETE
             FROM raw_log
             WHERE 
@@ -206,7 +206,7 @@ def HyperSnake(vizqlfile):
             print(">>> Converting structure now...")
 
             affected_rows = connection.execute_command(
-                command=f"""
+                command="""
                 CREATE TABLE IF NOT EXISTS qplog AS (
                 SELECT
                    (log_entry->>'ts')::TIMESTAMP AS ts,
@@ -243,7 +243,7 @@ def HyperSnake(vizqlfile):
             print(">>> Converted log entries or tracebacks: ", affected_rows)
 
             affected_rows = connection.execute_command(
-                command=f"""
+                command="""
                 CREATE TABLE IF NOT EXISTS excplog AS (
                     SELECT
                        (log_entry->>'ts')::TIMESTAMP AS ts,
@@ -265,7 +265,7 @@ def HyperSnake(vizqlfile):
 
             print(">>> Dropping the dump table...")
 
-            connection.execute_command(command=f"DROP TABLE raw_log;")
+            connection.execute_command(command="DROP TABLE raw_log;")
 
     print(">>> Hyper step complete...")
 
