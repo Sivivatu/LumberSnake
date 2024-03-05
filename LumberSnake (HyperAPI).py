@@ -5,8 +5,13 @@ import zipfile
 import time
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename, askdirectory
-from tableauhyperapi import HyperProcess, Telemetry, \
-    Connection, CreateMode, escape_string_literal
+from tableauhyperapi import (
+    HyperProcess,
+    Telemetry,
+    Connection,
+    CreateMode,
+    escape_string_literal,
+)
 from pathlib import Path
 
 
@@ -16,30 +21,31 @@ from pathlib import Path
 
 #############################
 
+
 def ExtractLogs(OutputFilepath, ZipLogsFile):
-    print('Extracting VizQL Logs From ' + ZipLogsFile + "...")
-    zf = zipfile.ZipFile(ZipLogsFile, 'r')
+    print("Extracting VizQL Logs From " + ZipLogsFile + "...")
+    zf = zipfile.ZipFile(ZipLogsFile, "r")
 
     try:
-
         for info in zf.infolist():
             if "/nativeapi_vizqlserver" in info.filename:
                 print(info.filename)
-                if info.filename[-1] == '/':
+                if info.filename[-1] == "/":
                     continue
                 info.filename = os.path.basename(info.filename)
-                zf.extract(info, OutputFilepath+"vizql\\")
+                zf.extract(info, OutputFilepath + "vizql\\")
 
             elif "/access" in info.filename:
                 print(info.filename)
-                if info.filename[-1] == '/':
+                if info.filename[-1] == "/":
                     continue
                 info.filename = os.path.basename(info.filename)
-                zf.extract(info, OutputFilepath+"http\\")
+                zf.extract(info, OutputFilepath + "http\\")
 
     except Exception as e:
-        print (e)
+        print(e)
         pass
+
 
 ##############################
 
@@ -47,11 +53,13 @@ def ExtractLogs(OutputFilepath, ZipLogsFile):
 
 ##############################
 
-def cleanFilepath(directory):
 
+def cleanFilepath(directory):
     if os.path.exists(directory):
         print("WARNING - the 'Log Dump' folder exists. Press 'Y' to delete.")
-        check = input("Okay to delete? Press 'Y' to confirm | Any other key will exit. >> ")
+        check = input(
+            "Okay to delete? Press 'Y' to confirm | Any other key will exit. >> "
+        )
 
         if check.lower() == "y":
             shutil.rmtree(directory)
@@ -64,7 +72,9 @@ def cleanFilepath(directory):
 
     if os.path.exists(hyperfile):
         print("WARNING - an existing LumberSnake.hyper file exists.")
-        check = input("How would you like to proceed?\n >> Press 'Y' to delete. \n >> Press 'A' to append \n >> Press any other key to exit.\n >> ")
+        check = input(
+            "How would you like to proceed?\n >> Press 'Y' to delete. \n >> Press 'A' to append \n >> Press any other key to exit.\n >> "
+        )
 
         if check.lower() == "y":
             try:
@@ -89,13 +99,18 @@ def cleanFilepath(directory):
 
 ##############################
 
+
 def HyperCreate():
     print(">>> Creating Hyper File <<<")
     path_to_database = Path(hyperfile)
     with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-        with Connection(endpoint=hyper.endpoint,database=path_to_database,create_mode=CreateMode.CREATE_IF_NOT_EXISTS) as connection:
-            affected_rows = connection.execute_command(command=
-                f'''create table if not exists http  (
+        with Connection(
+            endpoint=hyper.endpoint,
+            database=path_to_database,
+            create_mode=CreateMode.CREATE_IF_NOT_EXISTS,
+        ) as connection:
+            affected_rows = connection.execute_command(
+                command=f"""create table if not exists http  (
                     serving_host             text,
                     client_host              text,
                     username                 text,
@@ -109,12 +124,16 @@ def HyperCreate():
                     content_length           text,
                     request_time_ms          text,
                     request_id               text
-                );''')
-            connection.execute_command(command=
-                f'''create table if not exists dump_table (
+                );"""
+            )
+            connection.execute_command(
+                command=f"""create table if not exists dump_table (
                     dump text
-                );''')
+                );"""
+            )
             print(affected_rows)
+
+
 ##############################
 
 # Convert VizQL files to Hyper
@@ -125,59 +144,69 @@ def HyperCreate():
 
 ##############################
 
+
 def HyperSnake(vizqlfile):
     path_to_database = Path(hyperfile)
 
     print(">>> Ingesting " + vizqlfile)
 
     with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-        with Connection(endpoint=hyper.endpoint,database=path_to_database) as connection:
-            affected_rows = connection.execute_command(command=
-                f'''
+        with Connection(
+            endpoint=hyper.endpoint, database=path_to_database
+        ) as connection:
+            affected_rows = connection.execute_command(
+                command=f"""
                  CREATE TABLE IF NOT EXISTS dump_table AS (
                     SELECT * from {escape_string_literal(vizqlfile)}
-                    (SCHEMA(dump json) WITH (FORMAT JSON)));''')
-            print('>>> Ingested string literals to dump_table or tracebacks: ',affected_rows)
+                    (SCHEMA(dump json) WITH (FORMAT JSON)));"""
+            )
+            print(
+                ">>> Ingested string literals to dump_table or tracebacks: ",
+                affected_rows,
+            )
 
-            affected_rows = connection.execute_command(command=
-                f'''                
+            affected_rows = connection.execute_command(
+                command=f"""                
                 CREATE TABLE IF NOT EXISTS raw_log AS (
                   SELECT
                     CAST(dump AS json OR NULL) AS log_entry
                       FROM dump_table
-                    );''')
-            print('>>> Ingested raw_log lines or tracebacks: ',affected_rows)
+                    );"""
+            )
+            print(">>> Ingested raw_log lines or tracebacks: ", affected_rows)
 
             print(">>> Logs ingested!")
 
             print(">>> Cleaning Hyper...")
 
-            affected_rows = connection.execute_command(command=
-            f'''
+            affected_rows = connection.execute_command(
+                command=f"""
             TRUNCATE TABLE dump_table;
-            ''')
-            print('>>> Truncated rows in dump_table or tracebacks: ',affected_rows)
+            """
+            )
+            print(">>> Truncated rows in dump_table or tracebacks: ", affected_rows)
 
-            affected_rows = connection.execute_command(command=
-            f'''            
+            affected_rows = connection.execute_command(
+                command=f"""            
             DROP TABLE dump_table;
-            ''')
-            print('>>> Dumped rows in dump_table or tracebacks: ',affected_rows)
+            """
+            )
+            print(">>> Dumped rows in dump_table or tracebacks: ", affected_rows)
 
-            affected_rows = connection.execute_command(command=
-            f''' 
+            affected_rows = connection.execute_command(
+                command=f""" 
             DELETE
             FROM raw_log
             WHERE 
             log_entry IS NULL
-            ;''')  
-            print('>>> Deleted lines in raw_log or tracebacks: ',affected_rows)
+            ;"""
+            )
+            print(">>> Deleted lines in raw_log or tracebacks: ", affected_rows)
 
             print(">>> Converting structure now...")
 
             affected_rows = connection.execute_command(
-                command=
-                f'''
+                command=f"""
                 CREATE TABLE IF NOT EXISTS qplog AS (
                 SELECT
                    (log_entry->>'ts')::TIMESTAMP AS ts,
@@ -209,10 +238,12 @@ def HyperSnake(vizqlfile):
                 CROSS JOIN json_array_elements(job_entry->'queries') as e2(queries_entry)
                 WHERE 
                 log_entry->>'k' = 'qp-batch-summary' 
-                );''')
-            print('>>> Converted log entries or tracebacks: ',affected_rows)
+                );"""
+            )
+            print(">>> Converted log entries or tracebacks: ", affected_rows)
 
-            affected_rows = connection.execute_command(command=f'''
+            affected_rows = connection.execute_command(
+                command=f"""
                 CREATE TABLE IF NOT EXISTS excplog AS (
                     SELECT
                        (log_entry->>'ts')::TIMESTAMP AS ts,
@@ -228,16 +259,15 @@ def HyperSnake(vizqlfile):
                        (log_entry->'v'->>'msg') AS msg
                     FROM raw_log
                     WHERE log_entry->>'k' = 'excp'
-                );''')
-            print('>>> Converted exceptions or tracebacks: ',affected_rows)
+                );"""
+            )
+            print(">>> Converted exceptions or tracebacks: ", affected_rows)
 
             print(">>> Dropping the dump table...")
 
-            connection.execute_command(
-                command=f"DROP TABLE raw_log;")
+            connection.execute_command(command=f"DROP TABLE raw_log;")
 
     print(">>> Hyper step complete...")
-
 
 
 ##############################
@@ -247,20 +277,23 @@ def HyperSnake(vizqlfile):
 
 ##############################
 
-def HTTPtoHyper(accessfile):
 
-    print (">>> Importing Access File " + accessfile + " to Hyper...")
+def HTTPtoHyper(accessfile):
+    print(">>> Importing Access File " + accessfile + " to Hyper...")
 
     path_to_database = Path(hyperfile)
 
     with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-        with Connection(endpoint=hyper.endpoint,
-                        database=path_to_database) as connection:
+        with Connection(
+            endpoint=hyper.endpoint, database=path_to_database
+        ) as connection:
             connection.execute_command(
                 command=f"COPY http from {escape_string_literal(accessfile)} with "
-                f"(format CSV, delimiter ' ', NULL '-', QUOTE '\"', ESCAPE '\\')")
+                f"(format CSV, delimiter ' ', NULL '-', QUOTE '\"', ESCAPE '\\')"
+            )
 
     print("HTTP file imported in to Hyper...")
+
 
 ##############################
 
@@ -268,34 +301,39 @@ def HTTPtoHyper(accessfile):
 start = time.time()
 
 
-
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     hyperfile = "LumberSnake.hyper"
-    directory = '.\\Log Dump\\'
+    directory = ".\\Log Dump\\"
 
     print("Cleaning current directories and files.")
     cleanFilepath(directory)
 
     # Select if you want to extract from zip file or point at directory.
-    
+
     print(">>>> DO YOU WANT TO EXTRACT FROM ZIP - OR DIRECTLY FROM A FOLDER? <<<<")
-    
-    program = input("Select from the following options: \n >> Z for zip file. \n >> F for folder directory. \n >> Any other key to quit. \n >>")
+
+    program = input(
+        "Select from the following options: \n >> Z for zip file. \n >> F for folder directory. \n >> Any other key to quit. \n >>"
+    )
 
     if program.lower() == "z":
         print("Select your zip logs.")
         Tk().withdraw()
         ZipLogsFile = askopenfilename(initialdir="./", title="Select zip logs")
         ExtractLogs(directory, ZipLogsFile)
-        print ("Logs Extracted from Zip!")
-    
+        print("Logs Extracted from Zip!")
+
     elif program.lower() == "f":
-        print("Pick your log folder. For example: C:/ProgramData/Tableau/Tableau Server/data/tabsvc/logs/")
+        print(
+            "Pick your log folder. For example: C:/ProgramData/Tableau/Tableau Server/data/tabsvc/logs/"
+        )
         Tk().withdraw()
-        if os.path.exists('C:/ProgramData/Tableau/Tableau Server/data/'):
-            directory = askdirectory(initialdir="C:/ProgramData/Tableau/Tableau Server/data/", title="Select log folder")
-            print (directory + " selected.")
+        if os.path.exists("C:/ProgramData/Tableau/Tableau Server/data/"):
+            directory = askdirectory(
+                initialdir="C:/ProgramData/Tableau/Tableau Server/data/",
+                title="Select log folder",
+            )
+            print(directory + " selected.")
         else:
             directory = askdirectory(initialdir="./", title="Select log folder")
             print(directory + " selected.")
@@ -303,7 +341,6 @@ if __name__ == '__main__':
         print("Exiting...")
         time.sleep(5)
         quit()
-
 
     HyperCreate()
 
@@ -315,7 +352,7 @@ if __name__ == '__main__':
                 accessfile = os.path.join(dirpath, filename)
                 HTTPtoHyper(accessfile)
             except Exception as e:
-                print (e)
+                print(e)
                 pass
 
     print(">>> Begin VizQL File Import <<<")
@@ -326,12 +363,12 @@ if __name__ == '__main__':
                 vizqlfile = os.path.join(dirpath, filename)
                 HyperSnake(vizqlfile)
             except Exception as e:
-                print (e)
+                print(e)
                 pass
 
     if program.lower() == "z":
         shutil.rmtree(directory)
 
     end = time.time()
-    print ("Processed in " + str((end - start)/60)[:6] + "mins.")
+    print("Processed in " + str((end - start) / 60)[:6] + "mins.")
     time.sleep(5)
